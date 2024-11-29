@@ -1,3 +1,8 @@
 streamlit
-python-dotenv
+sentence-transformers
+pinecone-client
+langchain
+langchain-community
+langchain-pinecone
 openai
+gitpython

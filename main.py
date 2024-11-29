@@ -1,44 +1,81 @@
-from groq import Groq
 import streamlit as st
+from ragUtils import CodebaseRAG
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
 
-st.title("ChatGPT-like clone")
-
-# load environment variables
+# Load environment variables
 load_dotenv()
+
+# Get API keys from environment variables
+pinecone_api_key = os.getenv("PINECONE_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
-# initialize the OpenAI client
-client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=groq_api_key,
-)
-
-if "groq_model" not in st.session_state:
-    st.session_state["openai_model"] = "mixtral-8x7b-32768"
-
-if "messages" not in st.session_state:
+# Initialize session state
+if 'messages' not in st.session_state:
     st.session_state.messages = []
+if 'current_repo' not in st.session_state:
+    st.session_state.current_repo = None
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Verify API keys and initialize RAG
+if not pinecone_api_key or not groq_api_key:
+    st.error("⚠️ API keys not found in environment variables. Please check your .env file.")
+else:
+    if 'rag' not in st.session_state:
+        try:
+            st.session_state.rag = CodebaseRAG(pinecone_api_key, groq_api_key)
+        except Exception as e:
+            st.error(f"Error initializing RAG: {str(e)}")
 
-if prompt := st.chat_input("What is up?"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# App title
+st.title("Codebase Chat")
 
-    with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
-            model=st.session_state["openai_model"],
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+# Sidebar for configuration
+with st.sidebar:
+    st.header("Configuration")
+    
+    # Repository URL input
+    repo_url = st.text_input("GitHub Repository URL")
+    
+    # Initialize button
+    if st.button("Initialize Repository"):
+        if not st.session_state.rag:
+            st.error("⚠️ RAG system not initialized. Please check your API keys.")
+        elif repo_url:
+            try:
+                # Clone and process repository
+                repo_path = st.session_state.rag.clone_repository(repo_url, "./repos")
+                files_content = st.session_state.rag.process_repository(repo_path)
+                
+                # Index repository
+                namespace = repo_url
+                st.session_state.rag.index_repository(files_content, namespace)
+                st.session_state.current_repo = repo_url
+                
+                st.success("Repository initialized successfully!")
+            except Exception as e:
+                st.error(f"Error initializing repository: {str(e)}")
+        else:
+            st.error("Please provide a repository URL")
+
+# Chat interface
+if st.session_state.rag and st.session_state.current_repo:
+    # Display chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Ask about the codebase"):
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Get response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = st.session_state.rag.query_codebase(prompt, st.session_state.current_repo)
+                st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+else:
+    st.info("Please initialize a repository using the sidebar configuration.")
