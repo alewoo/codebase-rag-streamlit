@@ -89,7 +89,6 @@ codebase-rag-chatbot/
 Read about the development process and technical details in my blog post: [How I Built a System to Interact with Codebases Using RAG and LLMs](#)
 
 ## 📫 Contact
-
-* LinkedIn: Your Name
-* Twitter: @yourhandle
-* Blog: [Your Blog](#)
+- LinkedIn: [Alex Wang](https://www.linkedin.com/in/alexwang-/)
+- Twitter: [@imalexwang](https://x.com/imalexwang)
+- Blog: [solo diaries](https://imalexwang.substack.com/)
