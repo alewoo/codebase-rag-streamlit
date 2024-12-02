@@ -15,7 +15,7 @@ An advanced retrieval-augmented generation (RAG) system designed to interact wit
 
 ## 🚀 Live Demo
 
-Try out the live application here: [Codebase RAG Chatbot](#)
+Try out the live application here: [Codebase RAG Chatbot](https://codebase.streamlit.app/)
 
 ## 💻 Tech Stack
 
